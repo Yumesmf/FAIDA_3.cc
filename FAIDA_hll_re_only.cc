@@ -15,7 +15,7 @@
 #include <bitset>
 #include <time.h>
 
-#define SAMPLEDSIZE 900
+#define SAMPLEDSIZE 5000
 using namespace std;
 
 //
@@ -212,7 +212,7 @@ void print_sampledTable(vector<struct CSVDATA> csvData_sampled)
     cout << endl;
 }
 
-/*sampeldTable和compare的IND (full tuple) 以及 compare中的非IND*/
+/*sampeldTable和compare的IND (full tuple) */
 EXTRACTED_DATA invertedIndex(vector<struct CSVDATA> csvData_sampled, vector<struct CSVDATA> csvData_compare)
 {
     for (int i = 0; i < csvData_compare.size(); i++)
@@ -231,18 +231,27 @@ EXTRACTED_DATA invertedIndex(vector<struct CSVDATA> csvData_sampled, vector<stru
 }
 
 /*invertedIndex后不是IND的tuple original和compare*/
-EXTRACTED_DATA NOT_IND(EXTRACTED_DATA IND_full_hash, vector<CSVDATA> csvData_original_compare, EXTRACTED_DATA NOT_IND_full_hash)
+EXTRACTED_DATA NOT_IND(EXTRACTED_DATA IND_full_hash, vector<CSVDATA> csvData, EXTRACTED_DATA NOT_IND_full_hash)
 {
 
-    for (int j = 0; j < csvData_original_compare.size(); j++)
+    for (int i = 0; i < csvData.size(); i++)
     {
-        if ((find(IND_full_hash.Names.begin(), IND_full_hash.Names.end(), csvData_original_compare[j].Name) == IND_full_hash.Names.end()) || (find(IND_full_hash.Countries.begin(), IND_full_hash.Countries.end(), csvData_original_compare[j].Country) == IND_full_hash.Countries.end()) || (find(IND_full_hash.Genders.begin(), IND_full_hash.Genders.end(), csvData_original_compare[j].Gender) == IND_full_hash.Genders.end()))
+        for (int j = 0; j < IND_full_hash.Names.size(); j++)
         {
-            NOT_IND_full_hash.Names.push_back(csvData_original_compare[j].Name);
-            NOT_IND_full_hash.Countries.push_back(csvData_original_compare[j].Country);
-            NOT_IND_full_hash.Genders.push_back(csvData_original_compare[j].Gender);
+            if ((csvData[i].Name == IND_full_hash.Names[j]) && (csvData[i].Country == IND_full_hash.Countries[j]) && (csvData[i].Gender == IND_full_hash.Genders[j]))
+            {
+                csvData.erase(csvData.begin() + i);
+            }
         }
     }
+
+    for (int i = 0; i < csvData.size(); i++)
+    {
+        NOT_IND_full_hash.Names.push_back(csvData[i].Name);
+        NOT_IND_full_hash.Countries.push_back(csvData[i].Country);
+        NOT_IND_full_hash.Genders.push_back(csvData[i].Gender);
+    }
+
     return NOT_IND_full_hash;
 }
 
@@ -316,23 +325,34 @@ EXTRACTED_DATA HLL(EXTRACTED_DATA NOT_IND_full_hash_compare, EXTRACTED_DATA NOT_
     }
 
     int i;
+    vector<int> IND_record_num;
+
     for (int i = 0; i < hll_compare.size(); i++)
     {
         for (int j = 0; j < hll_original.size(); j++)
         {
             if (hll_compare[i] == hll_original[j])
             {
-                if ((NOT_IND_full_hash_compare_HLL.Names[i] == NOT_IND_full_hash_original_HLL.Names[j]) && (NOT_IND_full_hash_compare_HLL.Countries[i] == NOT_IND_full_hash_original_HLL.Countries[j]) && (NOT_IND_full_hash_compare_HLL.Genders[i] == NOT_IND_full_hash_original_HLL.Genders[j]))
+                if (find(IND_record_num.begin(), IND_record_num.end(), i) == IND_record_num.end())
                 {
-                    if ((find(IND_full_HLL.Names.begin(), IND_full_HLL.Names.end(), NOT_IND_full_compare.Names[i]) == IND_full_HLL.Names.end()) || (find(IND_full_HLL.Countries.begin(), IND_full_HLL.Countries.end(), NOT_IND_full_compare.Countries[i]) == IND_full_HLL.Countries.end()) || (find(IND_full_HLL.Genders.begin(), IND_full_HLL.Genders.end(), NOT_IND_full_compare.Genders[i]) == IND_full_HLL.Genders.end()))
-                    {
-                        IND_full_HLL.Names.push_back(NOT_IND_full_compare.Names[i]);
-                        IND_full_HLL.Countries.push_back(NOT_IND_full_compare.Countries[i]);
-                        IND_full_HLL.Genders.push_back(NOT_IND_full_compare.Genders[i]);
-                    }
+                    IND_record_num.push_back(i);
                 }
+
+                // if ((find(IND_full_HLL.Names.begin(), IND_full_HLL.Names.end(), NOT_IND_full_compare.Names[i]) == IND_full_HLL.Names.end()) || (find(IND_full_HLL.Countries.begin(), IND_full_HLL.Countries.end(), NOT_IND_full_compare.Countries[i]) == IND_full_HLL.Countries.end()) || (find(IND_full_HLL.Genders.begin(), IND_full_HLL.Genders.end(), NOT_IND_full_compare.Genders[i]) == IND_full_HLL.Genders.end()))
+                // {
+                //     IND_full_HLL.Names.push_back(NOT_IND_full_compare.Names[i]);
+                //     IND_full_HLL.Countries.push_back(NOT_IND_full_compare.Countries[i]);
+                //     IND_full_HLL.Genders.push_back(NOT_IND_full_compare.Genders[i]);
+                // }
             }
         }
+    }
+    // cout << IND_record_num.size() << endl;
+    for (int i = 0; i < IND_record_num.size(); i++)
+    {
+        IND_full_HLL.Names.push_back(NOT_IND_full_compare.Names[IND_record_num[i]]);
+        IND_full_HLL.Countries.push_back(NOT_IND_full_compare.Countries[IND_record_num[i]]);
+        IND_full_HLL.Genders.push_back(NOT_IND_full_compare.Genders[IND_record_num[i]]);
     }
     // for (int i = 0; i < IND_full_HLL.Names.size(); i++)
     // {
@@ -394,6 +414,15 @@ int main(void)
 
     clock_t end = clock();
     cout << "Running time: " << (double)(end - begin) / CLOCKS_PER_SEC * 1000 << "ms" << endl;
+
+    ofstream outFile;
+    outFile.open("data111.csv", ios::out); // 打开文件
+    for (int i = 0; i < IND_result.Names.size(); i++)
+    {
+        outFile << IND_result.Names[i] << IND_result.Countries[i] << IND_result.Genders[i] << endl;
+    }
+    outFile.close();
+
     return 0;
 }
 
